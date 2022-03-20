@@ -1,4 +1,4 @@
-import numpy as np
+import math
 
 session = None
 
@@ -103,6 +103,28 @@ class Operator(Node):
     def __repr__(self):
         return f'Operator: name:{self.name}'
 
+
+class UnaryOperator(Operator):
+    def __init__(self, name='UnaryOperator'):
+        super().__init__(name)
+
+    def __repr__(self):
+        return f'UnaryOperator: name:{self.name}'
+
+    def forward(self, a):
+        raise NotImplementedError()
+
+    def backward(self, a, d_out):
+        raise NotImplementedError()
+
+
+class BinaryOperator(Operator):
+    def __init__(self, name='BinaryOperator'):
+        super().__init__(name)
+
+    def __repr__(self):
+        return f'BinaryOperator: name:{self.name}'
+
     def forward(self, a, b):
         raise NotImplementedError()
 
@@ -110,117 +132,171 @@ class Operator(Node):
         raise NotImplementedError()
 
 
-class Add(Operator):
+class Neg(UnaryOperator):
+    count = 0
+
+    def __init__(self, a, name=None):
+        super().__init__(name)
+        self.inputs = [a]
+        self.name = f'Neg/{Neg.count}' if name is None else name
+        Neg.count += 1
+
+    def forward(self, a):
+        return -a
+
+    def backward(self, a, d_out):
+        return [-d_out]
+
+
+class Add(BinaryOperator):
     count = 0
 
     def __init__(self, a, b, name=None):
         super().__init__(name)
         self.inputs = [a, b]
-        self.name = f'add/{Add.count}' if name is None else name
+        self.name = f'Add/{Add.count}' if name is None else name
         Add.count += 1
 
     def forward(self, a, b):
         return a + b
 
     def backward(self, a, b, d_out):
-        return d_out, d_out
+        return [d_out, d_out]
 
 
-class Sub(Operator):
+class Sub(BinaryOperator):
     count = 0
 
     def __init__(self, a, b, name=None):
         super().__init__(name)
         self.inputs = [a, b]
-        self.name = f'sub/{Sub.count}' if name is None else name
+        self.name = f'Sub/{Sub.count}' if name is None else name
         Sub.count += 1
 
     def forward(self, a, b):
         return a - b
 
     def backward(self, a, b, d_out):
-        return d_out, -d_out
+        return [d_out, -d_out]
 
 
-class Mul(Operator):
+class Mul(BinaryOperator):
     count = 0
 
     def __init__(self, a, b, name=None):
         super().__init__(name)
         self.inputs = [a, b]
-        self.name = f'mul/{Mul.count}' if name is None else name
+        self.name = f'Mul/{Mul.count}' if name is None else name
         Mul.count += 1
 
     def forward(self, a, b):
         return a * b
 
     def backward(self, a, b, d_out):
-        return d_out * b, d_out * a
+        return [d_out * b, d_out * a]
 
 
-class Div(Operator):
+class Div(BinaryOperator):
     count = 0
 
     def __init__(self, a, b, name=None):
         super().__init__(name)
         self.inputs = [a, b]
-        self.name = f'div/{Div.count}' if name is None else name
+        self.name = f'Div/{Div.count}' if name is None else name
         Div.count += 1
 
     def forward(self, a, b):
         return a / b
 
     def backward(self, a, b, d_out):
-        return d_out / b, d_out * a / np.power(b, 2)
+        return [d_out / b, d_out * a / b ** 2]
 
 
-class Pow(Operator):
+class Pow(BinaryOperator):
     count = 0
 
     def __init__(self, a, b, name=None):
         super().__init__(name)
         self.inputs = [a, b]
-        self.name = f'pow/{Pow.count}' if name is None else name
+        self.name = f'Pow/{Pow.count}' if name is None else name
         Pow.count += 1
 
     def forward(self, a, b):
-        return np.power(a, b)
+        return a ** b
 
     def backward(self, a, b, d_out):
-        return d_out * b * np.power(a, (b - 1)), d_out * np.log(a) * np.power(a, b)
+        return [d_out * b * a ** (b - 1), d_out * math.log(a) * a ** b]
 
 
-class MatMul(Operator):
+class MatMul(BinaryOperator):
     count = 0
 
     def __init__(self, a, b, name=None):
         super().__init__(name)
         self.inputs = [a, b]
-        self.name = f'matmul/{MatMul.count}' if name is None else name
+        self.name = f'MatMul/{MatMul.count}' if name is None else name
         MatMul.count += 1
 
     def forward(self, a, b):
         return a @ b
 
     def backward(self, a, b, d_out):
-        return d_out @ b.T, a.T @ d_out
+        return [d_out @ b.T, a.T @ d_out]
 
 
-def node_wrapper(func, self, other):
+class Exp(UnaryOperator):
+    count = 0
+
+    def __init__(self, a, name=None):
+        super().__init__(name)
+        self.inputs = [a]
+        self.name = f'Exp/{Exp.count}' if name is None else name
+        Exp.count += 1
+
+    def forward(self, a):
+        return math.exp(a)
+
+    def backward(self, a, d_out):
+        return [d_out * math.exp(a)]
+
+
+class Sin(UnaryOperator):
+    count = 0
+
+    def __init__(self, a, name=None):
+        super().__init__(name)
+        self.inputs = [a]
+        self.name = f'Sin/{Sin.count}' if name is None else name
+        Sin.count += 1
+
+    def forward(self, a):
+        return math.sin(a)
+
+    def backward(self, a, d_out):
+        return [d_out * math.cos(a)]
+
+
+def node_wrapper_unary(func, self):
+    return func(self)
+
+
+def node_wrapper_binary(func, self, other):
     if isinstance(other, Node):
         return func(self, other)
-    if isinstance(other, float) or isinstance(other, int):
+    if isinstance(other, float):
         return func(self, Constant(other))
     raise TypeError('Incompatible types encountered!')
 
 
-Node.__neg__ = lambda self: node_wrapper(Mul, self, Constant(-1))
-Node.__add__ = lambda self, other: node_wrapper(Add, self, other)
-Node.__sub__ = lambda self, other: node_wrapper(Sub, self, other)
-Node.__mul__ = lambda self, other: node_wrapper(Mul, self, other)
-Node.__truediv__ = lambda self, other: node_wrapper(Div, self, other)
-Node.__pow__ = lambda self, other: node_wrapper(Pow, self, other)
-Node.__matmul__ = lambda self, other: node_wrapper(MatMul, self, other)
+Node.neg = lambda self: node_wrapper_unary(Neg, self)
+Node.add = lambda self, other: node_wrapper_binary(Add, self, other)
+Node.sub = lambda self, other: node_wrapper_binary(Sub, self, other)
+Node.mul = lambda self, other: node_wrapper_binary(Mul, self, other)
+Node.div = lambda self, other: node_wrapper_binary(Div, self, other)
+Node.pow = lambda self, other: node_wrapper_binary(Pow, self, other)
+Node.matmul = lambda self, other: node_wrapper_binary(MatMul, self, other)
+Node.exp = lambda self: node_wrapper_unary(Exp, self)
+Node.sin = lambda self: node_wrapper_unary(Sin, self)
 
 
 def topological_sort(head_node=None, graph=session):
@@ -270,29 +346,27 @@ def backward_pass(ordering):
 
 def main():
     with Graph() as _:
-        val1, val2, val3 = 0.9, 0.4, 1.3
+        x = Variable(0, name='x')
+        o = Node.exp(Node.sin(Node.neg(x)))
+        ordering = topological_sort(o)
 
-        x = Variable(val1, name='x')
-        y = Variable(val2, name='y')
-        c = Constant(val3, name='c')
-        z = x - y + c
-
-        ordering = topological_sort(z)
+        val = 1
+        x.value = val
         forward_pass(ordering)
         backward_pass(ordering)
 
-        dzdx_node = [a for a in ordering if a.name == 'x'][0]
-        dzdy_node = [a for a in ordering if a.name == 'y'][0]
-        dzdc_node = [a for a in ordering if a.name == 'c'][0]
+        dodx_node = [a for a in ordering if a.name == 'x'][0]
+        print(f'do/dx expected = {-math.cos(val) * math.exp(-math.sin(val))}')
+        print(f'do/dx computed = {dodx_node.gradient}')
 
-        print(f'dz/dx expected = {1}')
-        print(f'dz/dx computed = {dzdx_node.gradient}')
+        val = math.pi
+        x.value = val
+        forward_pass(ordering)
+        backward_pass(ordering)
 
-        print(f'dz/dy expected = {-1}')
-        print(f'dz/dy computed = {dzdy_node.gradient}')
-
-        print(f'dz/dc expected = {1}')
-        print(f'dz/dc computed = {dzdc_node.gradient}')
+        dodx_node = [a for a in ordering if a.name == 'x'][0]
+        print(f'do/dx expected = {-math.cos(val) * math.exp(-math.sin(val))}')
+        print(f'do/dx computed = {dodx_node.gradient}')
 
 
 if __name__ == "__main__":
