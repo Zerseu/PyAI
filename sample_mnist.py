@@ -4,7 +4,7 @@ import numpy as np
 from sklearn import datasets
 from sklearn.model_selection import train_test_split
 
-from function_activation import tanh_poly, tanh_poly_prime
+from function_activation import sigmoid_poly, sigmoid_poly_prime
 from function_loss import mse, mse_prime
 from layer_activation import ActivationLayer
 from layer_fully_connected import FullyConnectedLayer
@@ -39,11 +39,11 @@ def main():
 
     net = ArtificialNeuralNetwork()
     net.add(FullyConnectedLayer(8 * 8, 25))
-    net.add(ActivationLayer(tanh_poly, tanh_poly_prime))
+    net.add(ActivationLayer(sigmoid_poly, sigmoid_poly_prime))
     net.add(FullyConnectedLayer(25, 25))
-    net.add(ActivationLayer(tanh_poly, tanh_poly_prime))
+    net.add(ActivationLayer(sigmoid_poly, sigmoid_poly_prime))
     net.add(FullyConnectedLayer(25, 10))
-    net.add(ActivationLayer(tanh_poly, tanh_poly_prime))
+    net.add(ActivationLayer(sigmoid_poly, sigmoid_poly_prime))
 
     net.use(mse, mse_prime)
     errors = net.fit(x_train, y_train_cat, epochs=100, learning_rate=0.1)
