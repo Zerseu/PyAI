@@ -30,7 +30,8 @@ if __name__ == "__main__":
     def update():
         global particle_velocities, particle_positions, particle_best, particle_best_f, global_best, global_best_f
         r1, r2 = np.random.rand(2)
-        particle_velocities = w * particle_velocities + c1 * r1 * (particle_best - particle_positions) + c2 * r2 * (global_best.reshape(-1, 1) - particle_positions)
+        particle_velocities = w * particle_velocities + c1 * r1 * (particle_best - particle_positions) + c2 * r2 * (
+                    global_best.reshape(-1, 1) - particle_positions)
         particle_positions = particle_positions + particle_velocities
         obj = f(particle_positions[0], particle_positions[1])
         particle_best[:, (particle_best_f >= obj)] = particle_positions[:, (particle_best_f >= obj)]
@@ -47,8 +48,11 @@ if __name__ == "__main__":
     contours = ax.contour(x, y, z, 10, colors='black', alpha=0.4)
     ax.clabel(contours, inline=True, fontsize=8, fmt='%.0f')
     plot_particle_best = ax.scatter(particle_best[0], particle_best[1], marker='o', color='black', alpha=0.5)
-    plot_particle_positions = ax.scatter(particle_positions[0], particle_positions[1], marker='o', color='blue', alpha=0.5)
-    plot_particle_velocities = ax.quiver(particle_positions[0], particle_positions[1], particle_velocities[0], particle_velocities[1], color='blue', width=0.005, angles='xy', scale_units='xy', scale=1)
+    plot_particle_positions = ax.scatter(particle_positions[0], particle_positions[1], marker='o', color='blue',
+                                         alpha=0.5)
+    plot_particle_velocities = ax.quiver(particle_positions[0], particle_positions[1], particle_velocities[0],
+                                         particle_velocities[1], color='blue', width=0.005, angles='xy',
+                                         scale_units='xy', scale=1)
     plot_global_best = plt.scatter([global_best[0]], [global_best[1]], marker='*', s=100, color='black', alpha=0.4)
     ax.set_xlim([0, 5])
     ax.set_ylim([0, 5])
